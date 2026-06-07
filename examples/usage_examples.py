@@ -1,10 +1,8 @@
-# 使用示例
+﻿# 浣跨敤绀轰緥
 
-## 示例 1：引用认证模块（001 和 003 通用）
-
+## 绀轰緥 1锛氬紩鐢ㄨ璇佹ā鍧楋紙001 鍜?003 閫氱敤锛?
 ```python
-# 在 001 或 003 的 server.py 中
-from fastapi import FastAPI, Depends
+# 鍦?001 鎴?003 鐨?server.py 涓?from fastapi import FastAPI, Depends
 from auth.auth_routes import router as auth_router
 from auth.auth_middleware import get_current_user
 
@@ -18,20 +16,18 @@ def protected_endpoint(user = Depends(get_current_user)):
 
 ---
 
-## 示例 2：引用微信公众号发布（001 和 003 通用）
-
+## 绀轰緥 2锛氬紩鐢ㄥ井淇″叕浼楀彿鍙戝竷锛?01 鍜?003 閫氱敤锛?
 ```python
 from wechat_mp.publisher import WechatPublisher
 from wechat_mp.account_store import AccountStore
 
-# 初始化
-store = AccountStore("data/accounts.json", master_password="your_password")
+# 鍒濆鍖?store = AccountStore("data/accounts.json", master_password="your_password")
 publisher = WechatPublisher(store, config)
 
-# 发布文章
+# 鍙戝竷鏂囩珷
 article = {
-    "title": "测试文章",
-    "content": "<p>这是正文</p>",
+    "title": "娴嬭瘯鏂囩珷",
+    "content": "<p>杩欐槸姝ｆ枃</p>",
     "thumb_media_id": "xxx",
 }
 result = publisher.publish(article)
@@ -40,46 +36,41 @@ print(result)
 
 ---
 
-## 示例 3：引用社交平台发布（003 用，001 后续也可复用）
-
+## 绀轰緥 3锛氬紩鐢ㄧぞ浜ゅ钩鍙板彂甯冿紙003 鐢紝001 鍚庣画涔熷彲澶嶇敤锛?
 ```python
 from social_publish.baidu import BaiduPublisher
 from social_publish.toutiao import ToutiaoPublisher
 
-# 初始化
-baidu = BaiduPublisher(store, config)
+# 鍒濆鍖?baidu = BaiduPublisher(store, config)
 toutiao = ToutiaoPublisher(store, config)
 
-# 发布到百家号
+# 鍙戝竷鍒扮櫨瀹跺彿
 result = baidu.publish(article)
-print(f"百家号：{result}")
+print(f"鐧惧鍙凤細{result}")
 
-# 发布到今日头条
-result = toutiao.publish(article)
-print(f"今日头条：{result}")
+# 鍙戝竷鍒颁粖鏃ュご鏉?result = toutiao.publish(article)
+print(f"浠婃棩澶存潯锛歿result}")
 ```
 
 ---
 
-## 示例 4：一键发布到多平台（003 核心功能）
-
+## 绀轰緥 4锛氫竴閿彂甯冨埌澶氬钩鍙帮紙003 鏍稿績鍔熻兘锛?
 ```python
 from wechat_mp.publisher import WechatPublisher
 from social_publish.baidu import BaiduPublisher
 from social_publish.toutiao import ToutiaoPublisher
 
-# 初始化所有发布器
+# 鍒濆鍖栨墍鏈夊彂甯冨櫒
 publishers = {
     "wechat": WechatPublisher(store, config),
     "baidu": BaiduPublisher(store, config),
     "toutiao": ToutiaoPublisher(store, config),
 }
 
-# 用户勾选的平台
+# 鐢ㄦ埛鍕鹃€夌殑骞冲彴
 user_selected = ["wechat", "baidu"]
 
-# 一键发布
-results = {}
+# 涓€閿彂甯?results = {}
 for platform in user_selected:
     publisher = publishers[platform]
     results[platform] = publisher.publish(article)
@@ -89,29 +80,28 @@ print(results)
 
 ---
 
-## 示例 5：本地开发时引用 shared_modules/
+## 绀轰緥 5锛氭湰鍦板紑鍙戞椂寮曠敤 shared_modules/
 
 ```bash
-# 在 001 或 003 项目根目录
-pip install -e ../team/shared_modules/
+# 鍦?001 鎴?003 椤圭洰鏍圭洰褰?pip install -e ../team/shared_modules/
 ```
 
 ```python
-# 然后正常 import
+# 鐒跺悗姝ｅ父 import
 from auth.auth_routes import router
 from wechat_mp.publisher import WechatPublisher
 ```
 
 ---
 
-## 示例 6：生产环境通过 GitHub 安装
+## 绀轰緥 6锛氱敓浜х幆澧冮€氳繃 GitHub 瀹夎
 
 ```bash
-pip install git+https://github.com/<your-username>/content-aggregator-shared.git@main
+pip install git+https://github.com/Colinchiu007/content-aggregator-shared.git@main
 ```
 
 ```python
-# 然后正常 import
+# 鐒跺悗姝ｅ父 import
 from auth.auth_routes import router
 from wechat_mp.publisher import WechatPublisher
 ```

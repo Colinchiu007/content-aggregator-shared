@@ -92,58 +92,90 @@ async def check_video_quota(request: Request, user: Dict = Depends(get_current_u
         async def create_video(user=Depends(check_video_quota)):
             ...
     """
-    import psycopg2
     from datetime import date
 
-    DATABASE_URL = "postgresql://postgres:postgres@127.0.0.1:5432/user_db"
+    from shared.auth.config import get_config, get_db_connection
 
-    conn = psycopg2.connect(DATABASE_URL)
+    config = get_config()
+    conn = get_db_connection()
+
     # 使用 SERIALIZABLE 隔离级别防止并发问题
-    conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE)
+    if config.DATABASE_TYPE == "postgresql":
+        conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE)
+
     cur = conn.cursor()
 
     try:
         user_id = user["user_id"]
 
         # 原子操作：重置（如需要）+ 检查配额 + 增加计数，全部在单个 UPDATE 中完成
-        cur.execute("""
-            UPDATE user_profiles
-            SET videos_used_today = CASE
-                WHEN last_quota_reset IS NULL OR last_quota_reset < CURRENT_DATE
-                THEN 1  -- 跨天了，重置为 1（本次计入）
-                ELSE videos_used_today + 1  -- 同一天，增加计数
-            END,
-            last_quota_reset = CURRENT_DATE,
-            updated_at = CURRENT_TIMESTAMP
-            WHERE user_id = %s
-              AND (
-                -- 条件：未超配额（跨天自动重置后肯定未超；同一天时检查）
-                last_quota_reset IS NULL
-                OR last_quota_reset < CURRENT_DATE
-                OR videos_used_today < video_quota
-              )
-            RETURNING videos_used_today, video_quota
-        """, (user_id,))
+        if config.DATABASE_TYPE == "postgresql":
+            cur.execute("""
+                UPDATE user_profiles
+                SET videos_used_today = CASE
+                    WHEN last_quota_reset IS NULL OR last_quota_reset < CURRENT_DATE
+                    THEN 1  -- 跨天了，重置为 1（本次计入）
+                    ELSE videos_used_today + 1  -- 同一天，增加计数
+                END,
+                last_quota_reset = CURRENT_DATE,
+                updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = %s
+                  AND (
+                    -- 条件：未超配额（跨天自动重置后肯定未超；同一天时检查）
+                    last_quota_reset IS NULL
+                    OR last_quota_reset < CURRENT_DATE
+                    OR videos_used_today < video_quota
+                  )
+                RETURNING videos_used_today, video_quota
+            """, (user_id,))
+        else:
+            # SQLite 版本
+            cur.execute("""
+                UPDATE user_profiles
+                SET videos_used_today = CASE
+                    WHEN last_quota_reset IS NULL OR last_quota_reset < date('now')
+                    THEN 1
+                    ELSE videos_used_today + 1
+                END,
+                last_quota_reset = date('now'),
+                updated_at = datetime('now')
+                WHERE user_id = ?
+                  AND (
+                    last_quota_reset IS NULL
+                    OR last_quota_reset < date('now')
+                    OR videos_used_today < video_quota
+                  )
+            """, (user_id,))
+            conn.commit()
 
         result = cur.fetchone()
 
         if not result:
             # UPDATE 未影响任何行 → 配额已用完
-            cur.execute("""
-                SELECT video_quota, videos_used_today
-                FROM user_profiles
-                WHERE user_id = %s
-            """, (user_id,))
+            if config.DATABASE_TYPE == "postgresql":
+                cur.execute("""
+                    SELECT video_quota, videos_used_today
+                    FROM user_profiles
+                    WHERE user_id = %s
+                """, (user_id,))
+            else:
+                cur.execute("""
+                    SELECT video_quota, videos_used_today
+                    FROM user_profiles
+                    WHERE user_id = ?
+                """, (user_id,))
             quota_info = cur.fetchone()
             (quota, used) = quota_info if quota_info else (0, 0)
-            conn.rollback()
+            if config.DATABASE_TYPE == "postgresql":
+                conn.rollback()
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail=f"今日视频生成配额已用完（{used}/{quota}）。升级订阅计划以获取更多配额。"
             )
 
         (used_today, quota) = result
-        conn.commit()
+        if config.DATABASE_TYPE == "postgresql":
+            conn.commit()
 
         # 返回更新后的用户信息
         user["quota"] = quota
@@ -151,10 +183,12 @@ async def check_video_quota(request: Request, user: Dict = Depends(get_current_u
         return user
 
     except HTTPException:
-        conn.rollback()
+        if config.DATABASE_TYPE == "postgresql":
+            conn.rollback()
         raise
     except Exception as e:
-        conn.rollback()
+        if config.DATABASE_TYPE == "postgresql":
+            conn.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"配额检查失败：{str(e)}"

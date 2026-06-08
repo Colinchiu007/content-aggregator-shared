@@ -1,19 +1,54 @@
-# auth package
+"""
+共享认证模块
 
-FastAPI 认证模块（JWT + 中间件）。
+为 PROJECT-001、002、003 提供统一的认证能力。
 
-## 使用方式
+使用方式：
+    # 在 FastAPI 应用中
+    from shared.auth.auth_middleware import get_current_user
 
-```python
-from fastapi import FastAPI
-from auth.auth_routes import router as auth_router
-from auth.auth_middleware import get_current_user
+    @app.get("/api/protected")
+    async def protected(user=Depends(get_current_user)):
+        return {"user": user}
 
-app = FastAPI()
-app.include_router(auth_router)
+    # 在认证路由中
+    from shared.auth.auth_routes import router as auth_router
+    app.include_router(auth_router)
+"""
 
-# 保护端点
-@app.get("/api/protected")
-def protected_endpoint(user = Depends(get_current_user)):
-    return {"user": user}
-```
+__version__ = "1.0.0"
+
+from shared.auth.config import AuthConfig, get_config, get_db_connection
+from shared.auth.jwt_handler import (
+    create_access_token,
+    create_refresh_token,
+    decode_token,
+    get_user_from_token,
+)
+from shared.auth.auth_middleware import (
+    get_current_user,
+    get_current_user_optional,
+    require_role,
+    require_admin,
+    require_vip,
+    require_user,
+)
+
+__all__ = [
+    # 配置
+    "AuthConfig",
+    "get_config",
+    "get_db_connection",
+    # JWT
+    "create_access_token",
+    "create_refresh_token",
+    "decode_token",
+    "get_user_from_token",
+    # 中间件
+    "get_current_user",
+    "get_current_user_optional",
+    "require_role",
+    "require_admin",
+    "require_vip",
+    "require_user",
+]

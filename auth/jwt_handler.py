@@ -8,11 +8,14 @@ from typing import Any, Dict, Optional
 import jwt
 from jwt.algorithms import get_default_algorithms
 
-# 从配置读取，生产环境请通过环境变量设置
-JWT_SECRET_KEY: str = "dev-secret-key-change-in-production!"
-JWT_ALGORITHM: str = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 天
-REFRESH_TOKEN_EXPIRE_DAYS: int = 30
+# 配置从 shared.auth.config 动态加载
+from shared.auth.config import get_config
+
+_config = get_config()
+JWT_SECRET_KEY: str = _config.JWT_SECRET_KEY
+JWT_ALGORITHM: str = _config.JWT_ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES: int = _config.ACCESS_TOKEN_EXPIRE_MINUTES
+REFRESH_TOKEN_EXPIRE_DAYS: int = _config.REFRESH_TOKEN_EXPIRE_DAYS
 
 
 def create_access_token(
@@ -43,7 +46,7 @@ def create_refresh_token(
 ) -> str:
     """生成 JWT Refresh Token"""
     if expires_days is None:
-        expires_days = REFRESH_TOKEN_EXPIRE_DAYS
+        expires_days = get_config().REFRESH_TOKEN_EXPIRE_DAYS
 
     now = datetime.now(tz=timezone.utc)
     payload: Dict[str, Any] = {

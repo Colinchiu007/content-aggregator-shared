@@ -12,8 +12,8 @@ from typing import Any
 
 from loguru import logger
 
-from multi_publish.crypto import CredentialCrypto
-from multi_publish.models import PlatformAccount, PlatformType
+from wechat_mp.crypto import CredentialCrypto
+from wechat_mp.models import PlatformAccount, PlatformType
 
 
 class AccountStore:

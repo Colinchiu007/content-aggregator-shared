@@ -11,6 +11,8 @@ setup(
         "httpx>=0.27.0",
         "cryptography>=42.0.0",
         "pydantic>=2.0.0",
+        "playwright>=1.48.0",
+        "loguru>=0.7.2",
     ],
     python_requires=">=3.12",
 )

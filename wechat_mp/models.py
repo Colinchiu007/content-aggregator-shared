@@ -12,10 +12,16 @@ from typing import Any
 
 class PlatformType(Enum):
     """支持的平台类型"""
-    WECHAT_MP = "wechat_mp"      # 微信公众号
-    ZHIHU = "zhihu"              # 知乎（RPA，待启动）
-    WEIBO = "weibo"              # 微博（预留）
-    DOUYIN = "douyin"            # 抖音（预留）
+    WECHAT_MP = "wechat_mp"          # 微信公众号
+    ZHIHU = "zhihu"                  # 知乎
+    WEIBO = "weibo"                  # 微博
+    DOUYIN = "douyin"                # 抖音
+    XIAOHONGSHU = "xiaohongshu"      # 小红书
+    TENCENT_VIDEO = "tencent_video"  # 视频号
+    KUAISHOU = "kuaishou"            # 快手
+    TOUTIAO = "toutiao"              # 今日头条
+    YOUTUBE = "youtube"              # YouTube
+    TIKTOK = "tiktok"                # TikTok
 
 
 class TaskStatus(Enum):

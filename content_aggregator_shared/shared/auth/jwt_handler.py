@@ -9,7 +9,7 @@ import jwt
 from jwt.algorithms import get_default_algorithms
 
 # 配置从 shared.auth.config 动态加载
-from shared.auth.config import get_config
+from content_aggregator_shared.shared.auth.config import get_config
 
 _config = get_config()
 JWT_SECRET_KEY: str = _config.JWT_SECRET_KEY

@@ -45,7 +45,7 @@ def _load_config() -> dict:
     try:
         import sys as _sys
         _sys.path.insert(0, str(Path(__file__).parent.parent))
-        from wechat_mp.config import load_config
+        from content_aggregator_shared.shared.wechat_mp.config import load_config
         return load_config()
     except ImportError:
         # Standalone usage fallback

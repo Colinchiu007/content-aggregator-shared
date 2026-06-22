@@ -18,8 +18,8 @@ def protected_endpoint(user = Depends(get_current_user)):
 
 ## 绀轰緥 2锛氬紩鐢ㄥ井淇″叕浼楀彿鍙戝竷锛?01 鍜?003 閫氱敤锛?
 ```python
-from wechat_mp.publisher import WechatPublisher
-from wechat_mp.account_store import AccountStore
+from content_aggregator_shared.shared.wechat_mp.publisher import WechatPublisher
+from content_aggregator_shared.shared.wechat_mp.account_store import AccountStore
 
 # 鍒濆鍖?store = AccountStore("data/accounts.json", master_password="your_password")
 publisher = WechatPublisher(store, config)
@@ -56,7 +56,7 @@ print(f"浠婃棩澶存潯锛歿result}")
 
 ## 绀轰緥 4锛氫竴閿彂甯冨埌澶氬钩鍙帮紙003 鏍稿績鍔熻兘锛?
 ```python
-from wechat_mp.publisher import WechatPublisher
+from content_aggregator_shared.shared.wechat_mp.publisher import WechatPublisher
 from social_publish.baidu import BaiduPublisher
 from social_publish.toutiao import ToutiaoPublisher
 
@@ -89,7 +89,7 @@ print(results)
 ```python
 # 鐒跺悗姝ｅ父 import
 from auth.auth_routes import router
-from wechat_mp.publisher import WechatPublisher
+from content_aggregator_shared.shared.wechat_mp.publisher import WechatPublisher
 ```
 
 ---
@@ -103,5 +103,5 @@ pip install git+https://github.com/Colinchiu007/content-aggregator-shared.git@ma
 ```python
 # 鐒跺悗姝ｅ父 import
 from auth.auth_routes import router
-from wechat_mp.publisher import WechatPublisher
+from content_aggregator_shared.shared.wechat_mp.publisher import WechatPublisher
 ```

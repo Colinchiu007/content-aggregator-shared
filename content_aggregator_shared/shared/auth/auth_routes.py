@@ -11,9 +11,9 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-from shared.auth.config import get_config, get_db_connection, get_pwd_context
-from shared.auth.jwt_handler import create_access_token, create_refresh_token, get_user_from_token
-from shared.auth.models import (
+from content_aggregator_shared.shared.auth.config import get_config, get_db_connection, get_pwd_context
+from content_aggregator_shared.shared.auth.jwt_handler import create_access_token, create_refresh_token, get_user_from_token
+from content_aggregator_shared.shared.auth.models import (
     PasswordReset,
     PasswordResetRequest,
     RefreshRequest,

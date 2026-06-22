@@ -9,7 +9,7 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from shared.auth.jwt_handler import get_user_from_token
+from content_aggregator_shared.shared.auth.jwt_handler import get_user_from_token
 
 # ---------------------------------------------------------------------------
 # 常量 & 工具
@@ -94,7 +94,7 @@ async def check_video_quota(request: Request, user: Dict = Depends(get_current_u
     """
     from datetime import date
 
-    from shared.auth.config import get_config, get_db_connection
+    from content_aggregator_shared.shared.auth.config import get_config, get_db_connection
 
     config = get_config()
     conn = get_db_connection()

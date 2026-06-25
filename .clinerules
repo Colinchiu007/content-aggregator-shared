@@ -1,0 +1,6 @@
+# .clinerules — content-aggregator-shared 特定硬约束
+
+- rule: "放入本仓库的代码必须被至少 2 个项目引用，单项目专用代码不放这里"
+- rule: "零循环依赖：不依赖任何下游项目（content-aggregator、Multi-Publish 等）"
+- rule: "公开接口变更需谨慎，新增功能优先加可选参数保证向后兼容"
+- rule: "auth/ 和加密模块的代码变更必须有安全审查"

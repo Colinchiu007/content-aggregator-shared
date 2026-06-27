@@ -5,6 +5,8 @@ FastAPI 认证中间件 — 依赖注入式鉴权
 
 from typing import Any, Dict, List, Optional
 
+import asyncio
+
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -97,20 +99,20 @@ async def check_video_quota(request: Request, user: Dict = Depends(get_current_u
     from content_aggregator_shared.shared.auth.config import get_config, get_db_connection
 
     config = get_config()
-    conn = get_db_connection()
+    conn = await asyncio.to_thread(get_db_connection)
 
     # 使用 SERIALIZABLE 隔离级别防止并发问题
     if config.DATABASE_TYPE == "postgresql":
-        conn.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE)
+        await asyncio.to_thread(conn.set_isolation_level, psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE)
 
-    cur = conn.cursor()
+    cur = await asyncio.to_thread(conn.cursor)
 
     try:
         user_id = user["user_id"]
 
         # 原子操作：重置（如需要）+ 检查配额 + 增加计数，全部在单个 UPDATE 中完成
         if config.DATABASE_TYPE == "postgresql":
-            cur.execute("""
+            await asyncio.to_thread(cur.execute, """
                 UPDATE user_profiles
                 SET videos_used_today = CASE
                     WHEN last_quota_reset IS NULL OR last_quota_reset < CURRENT_DATE
@@ -130,7 +132,7 @@ async def check_video_quota(request: Request, user: Dict = Depends(get_current_u
             """, (user_id,))
         else:
             # SQLite 版本
-            cur.execute("""
+            await asyncio.to_thread(cur.execute, """
                 UPDATE user_profiles
                 SET videos_used_today = CASE
                     WHEN last_quota_reset IS NULL OR last_quota_reset < date('now')
@@ -146,28 +148,28 @@ async def check_video_quota(request: Request, user: Dict = Depends(get_current_u
                     OR videos_used_today < video_quota
                   )
             """, (user_id,))
-            conn.commit()
+            await asyncio.to_thread(conn.commit)
 
-        result = cur.fetchone()
+        result = await asyncio.to_thread(cur.fetchone)
 
         if not result:
             # UPDATE 未影响任何行 → 配额已用完
             if config.DATABASE_TYPE == "postgresql":
-                cur.execute("""
+                await asyncio.to_thread(cur.execute, """
                     SELECT video_quota, videos_used_today
                     FROM user_profiles
                     WHERE user_id = %s
                 """, (user_id,))
             else:
-                cur.execute("""
+                await asyncio.to_thread(cur.execute, """
                     SELECT video_quota, videos_used_today
                     FROM user_profiles
                     WHERE user_id = ?
                 """, (user_id,))
-            quota_info = cur.fetchone()
+            quota_info = await asyncio.to_thread(cur.fetchone)
             (quota, used) = quota_info if quota_info else (0, 0)
             if config.DATABASE_TYPE == "postgresql":
-                conn.rollback()
+                await asyncio.to_thread(conn.rollback)
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail=f"今日视频生成配额已用完（{used}/{quota}）。升级订阅计划以获取更多配额。"
@@ -175,7 +177,7 @@ async def check_video_quota(request: Request, user: Dict = Depends(get_current_u
 
         (used_today, quota) = result
         if config.DATABASE_TYPE == "postgresql":
-            conn.commit()
+            await asyncio.to_thread(conn.commit)
 
         # 返回更新后的用户信息
         user["quota"] = quota
@@ -184,18 +186,18 @@ async def check_video_quota(request: Request, user: Dict = Depends(get_current_u
 
     except HTTPException:
         if config.DATABASE_TYPE == "postgresql":
-            conn.rollback()
+            await asyncio.to_thread(conn.rollback)
         raise
     except Exception as e:
         if config.DATABASE_TYPE == "postgresql":
-            conn.rollback()
+            await asyncio.to_thread(conn.rollback)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"配额检查失败：{str(e)}"
         )
     finally:
-        cur.close()
-        conn.close()
+        await asyncio.to_thread(cur.close)
+        await asyncio.to_thread(conn.close)
 
 
 # ---------------------------------------------------------------------------

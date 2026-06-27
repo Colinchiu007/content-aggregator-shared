@@ -26,6 +26,7 @@ Usage as module:
 
 import abc
 import argparse
+import asyncio
 import base64
 import hashlib
 import hmac
@@ -163,7 +164,7 @@ class ImageProvider(abc.ABC):
     """Base class for image generation providers."""
 
     @abc.abstractmethod
-    def generate(self, prompt: str, size: str) -> bytes:
+    async def generate(self, prompt: str, size: str) -> bytes:
         """Generate an image and return raw bytes."""
         ...
 
@@ -193,7 +194,7 @@ class DoubaoProvider(ImageProvider):
         self._model = model
         self._base_url = base_url
 
-    def generate(self, prompt: str, size: str) -> bytes:
+    async def generate(self, prompt: str, size: str) -> bytes:
         resp = requests.post(
             f"{self._base_url}/images/generations",
             headers={"Content-Type": "application/json",
@@ -224,7 +225,7 @@ class OpenAIProvider(ImageProvider):
         self._model = model
         self._base_url = base_url
 
-    def generate(self, prompt: str, size: str) -> bytes:
+    async def generate(self, prompt: str, size: str) -> bytes:
         resp = requests.post(
             f"{self._base_url}/images/generations",
             headers={"Content-Type": "application/json",
@@ -254,7 +255,7 @@ class GeminiProvider(ImageProvider):
         self._model = model
         self._base_url = base_url
 
-    def generate(self, prompt: str, size: str) -> bytes:
+    async def generate(self, prompt: str, size: str) -> bytes:
         if "x" in size:
             w, h = size.split("x", 1)
             prompt = f"{prompt}\n\nGenerate this image at {w}x{h} resolution."
@@ -291,7 +292,7 @@ class DashScopeProvider(ImageProvider):
         self._model = model
         self._base_url = base_url
 
-    def generate(self, prompt: str, size: str) -> bytes:
+    async def generate(self, prompt: str, size: str) -> bytes:
         ds_size = size.replace("x", "*")  # DashScope uses "W*H"
         resp = requests.post(
             f"{self._base_url}/services/aigc/multimodal-generation/generation",
@@ -336,7 +337,7 @@ class MiniMaxProvider(ImageProvider):
         self._model = model
         self._base_url = base_url
 
-    def generate(self, prompt: str, size: str) -> bytes:
+    async def generate(self, prompt: str, size: str) -> bytes:
         w, h = 1024, 1024
         try:
             w, h = (int(x) for x in size.split("x", 1))
@@ -373,7 +374,7 @@ class ReplicateProvider(ImageProvider):
         self._model = model
         self._base_url = base_url
 
-    def generate(self, prompt: str, size: str) -> bytes:
+    async def generate(self, prompt: str, size: str) -> bytes:
         aspect = _size_to_aspect(size)
         headers = {"Content-Type": "application/json",
                    "Authorization": f"Bearer {self._api_key}",
@@ -395,7 +396,7 @@ class ReplicateProvider(ImageProvider):
         while data.get("status") not in ("succeeded", "failed", "canceled"):
             if time.monotonic() > deadline:
                 raise ValueError("Replicate polling timeout")
-            time.sleep(self._POLL_INTERVAL)
+            await asyncio.sleep(self._POLL_INTERVAL)
             data = requests.get(poll_url, headers=headers, timeout=30).json()
 
         if data.get("status") != "succeeded":
@@ -422,7 +423,7 @@ class AzureOpenAIProvider(ImageProvider):
         self._deployment = deployment or model
         self._base_url = base_url.rstrip("/")
 
-    def generate(self, prompt: str, size: str) -> bytes:
+    async def generate(self, prompt: str, size: str) -> bytes:
         if not self._base_url:
             raise ValueError("Azure OpenAI requires base_url "
                              "(e.g. https://YOUR-RESOURCE.openai.azure.com/openai)")
@@ -456,7 +457,7 @@ class OpenRouterProvider(ImageProvider):
         self._model = model
         self._base_url = base_url
 
-    def generate(self, prompt: str, size: str) -> bytes:
+    async def generate(self, prompt: str, size: str) -> bytes:
         aspect = _size_to_aspect(size)
         resp = requests.post(
             f"{self._base_url}/chat/completions",
@@ -573,7 +574,7 @@ class JimengProvider(ImageProvider):
             raise ValueError(f"Jimeng error ({resp.status_code}): {data}")
         return data
 
-    def generate(self, prompt: str, size: str) -> bytes:
+    async def generate(self, prompt: str, size: str) -> bytes:
         if not self._secret_key:
             raise ValueError("Jimeng requires both api_key (access_key_id) "
                              "and secret_key (secret_access_key)")
@@ -594,7 +595,7 @@ class JimengProvider(ImageProvider):
 
         # Poll for result
         for _ in range(self._POLL_MAX_ATTEMPTS):
-            time.sleep(self._POLL_INTERVAL)
+            await asyncio.sleep(self._POLL_INTERVAL)
             result = self._request("CVSync2AsyncGetResult", {
                 "req_key": self._model, "task_id": task_id,
             })
@@ -631,7 +632,7 @@ class ViduProvider(ImageProvider):
         self._model = model
         self._base_url = base_url
 
-    def generate(self, prompt: str, size: str) -> bytes:
+    async def generate(self, prompt: str, size: str) -> bytes:
         w, h = 1792, 1024
         try:
             w, h = (int(x) for x in size.split("x", 1))
@@ -745,7 +746,7 @@ def _build_provider(config: dict) -> ImageProvider:
 
 # --- Public API ---
 
-def generate_image(
+async def generate_image(
     prompt: str,
     output_path: str,
     size: str = "cover",
@@ -778,7 +779,7 @@ def generate_image(
         raw_bytes = None
         for attempt in range(max_retries + 1):
             try:
-                raw_bytes = provider.generate(prompt, resolved_size)
+                raw_bytes = await provider.generate(prompt, resolved_size)
                 break  # success
             except requests.exceptions.HTTPError as e:
                 if e.response is not None and e.response.status_code == 429 and attempt < max_retries:
@@ -788,7 +789,7 @@ def generate_image(
                         f"retrying in {wait}s (attempt {attempt + 1}/{max_retries})...",
                         file=sys.stderr,
                     )
-                    time.sleep(wait)
+                    await asyncio.sleep(wait)
                     continue
                 last_error = e
                 print(
@@ -807,7 +808,7 @@ def generate_image(
                         f"retrying in {wait}s...",
                         file=sys.stderr,
                     )
-                    time.sleep(wait)
+                    await asyncio.sleep(wait)
                     continue
                 last_error = e
                 print(
@@ -848,7 +849,7 @@ def generate_image(
     )
 
 
-def main():
+async def main():
     ap = argparse.ArgumentParser(description="Generate images using AI")
     ap.add_argument("--prompt", required=True, help="Image generation prompt")
     ap.add_argument("--output", required=True, help="Output file path")
@@ -862,7 +863,7 @@ def main():
         config = _load_config()
         if args.provider:
             config.setdefault("image", {})["provider"] = args.provider
-        path = generate_image(args.prompt, args.output, size=args.size, config=config)
+        path = await generate_image(args.prompt, args.output, size=args.size, config=config)
         print(f"Image saved: {path}")
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
@@ -870,4 +871,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

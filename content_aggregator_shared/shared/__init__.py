@@ -1,5 +1,5 @@
 """
 content-aggregator-shared namespace package
 
-Contains shared.auth, shared.wechat_mp, shared.rpa_engine sub-packages.
+Contains shared.auth, shared.wechat_mp, shared.rpa_engine, shared.proxy sub-packages.
 """
